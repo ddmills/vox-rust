@@ -8,6 +8,9 @@ struct Person;
 #[derive(Component)]
 struct Name(String);
 
+#[derive(Resource)]
+struct GreetTimer(Timer);
+
 impl Plugin for HelloPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GreetTimer(Timer::from_seconds(2.0, TimerMode::Repeating)))
@@ -15,9 +18,6 @@ impl Plugin for HelloPlugin {
             .add_systems(Update, greet_people);
     }
 }
-
-#[derive(Resource)]
-struct GreetTimer(Timer);
 
 fn greet_people(time: Res<Time>, mut timer: ResMut<GreetTimer>, query: Query<&Name, With<Person>>) {
     if timer.0.tick(time.delta()).just_finished() {

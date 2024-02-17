@@ -1,10 +1,12 @@
 use bevy::prelude::*;
 
 mod hello;
+mod terrain;
 
 fn main() {
     App::new()
         .add_plugins((DefaultPlugins, hello::HelloPlugin))
+        .add_plugins(terrain::TerrainPlugin)
         .add_systems(Startup, setup)
         .run();
 }

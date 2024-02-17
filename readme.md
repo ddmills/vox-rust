@@ -1,5 +1,6 @@
 ### experiments with bevy and rust
 
+https://github.com/tbillington/bevy_best_practices
 https://bevyengine.org/learn/quick-start/getting-started/setup/
 
 ```toml
