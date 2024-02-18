@@ -15,7 +15,6 @@ fn main() {
         .add_plugins(terrain::TerrainRenderPlugin)
         .add_plugins(camera::CameraPlugin)
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
-        .add_plugins(LogDiagnosticsPlugin::default())
         .run();
 }
 
