@@ -1,5 +1,6 @@
 use bevy::{
     diagnostic::FrameTimeDiagnosticsPlugin,
+    gizmos,
     pbr::wireframe::{Wireframe, WireframePlugin},
     prelude::*,
 };
@@ -17,7 +18,14 @@ fn main() {
         .add_plugins(camera::CameraPlugin)
         .add_plugins(WireframePlugin)
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
+        .add_systems(Update, draw_gizmos)
         .run();
+}
+
+fn draw_gizmos(mut gizmos: Gizmos) {
+    gizmos.line(Vec3::ZERO, Vec3::X * 100., Color::RED);
+    gizmos.line(Vec3::ZERO, Vec3::Y * 100., Color::GREEN);
+    gizmos.line(Vec3::ZERO, Vec3::Z * 100., Color::BLUE);
 }
 
 fn setup(

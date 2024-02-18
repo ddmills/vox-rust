@@ -5,16 +5,23 @@ use bevy::{
         mesh::{Indices, MeshVertexAttribute},
         render_resource::PrimitiveTopology,
     },
+    utils::petgraph::adj::Neighbors,
 };
 
 pub struct TerrainPlugin;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Block {
     Oob,
     Empty,
     Dirt,
     Stone,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum BlockVisibility {
+    Empty,
+    Opaque,
 }
 
 impl std::fmt::Display for Block {
@@ -37,12 +44,21 @@ impl Block {
             Block::Stone => true,
         }
     }
+
+    pub fn visibility(&self) -> BlockVisibility {
+        match *self {
+            Block::Oob => BlockVisibility::Empty,
+            Block::Empty => BlockVisibility::Empty,
+            Block::Dirt => BlockVisibility::Opaque,
+            Block::Stone => BlockVisibility::Opaque,
+        }
+    }
 }
 
 const MAP_SIZE_X: i16 = 16;
 const MAP_SIZE_Z: i16 = 16;
 const MAP_SIZE_Y: i16 = 32;
-const BLOCK_SIZE: f32 = 1.0;
+const BLOCK_SIZE: f32 = 1.;
 
 #[derive(Event)]
 pub struct TerrainModifiedEvent;
@@ -77,6 +93,17 @@ impl Terrain {
             || x >= MAP_SIZE_X as i16
             || y >= MAP_SIZE_Y as i16
             || z >= MAP_SIZE_Z as i16;
+    }
+
+    pub fn get_neighbors_immediate(&self, x: i16, y: i16, z: i16) -> [Block; 6] {
+        [
+            self.get(x, y + 1, z), // above
+            self.get(x, y, z - 1), // front
+            self.get(x + 1, y, z), // right
+            self.get(x, y, z + 1), // behind
+            self.get(x - 1, y, z), // left
+            self.get(x, y - 1, z), // below
+        ]
     }
 
     pub fn get_neighbors(&self, x: i16, y: i16, z: i16) -> [Block; 9 + 8 + 9] {
@@ -172,16 +199,16 @@ fn render_blocks(
     }
 
     ev_terrain_mod.clear();
-    let mesht = meshes.add(mesh_terrain(&terrain));
+    let mesh = meshes.add(mesh_terrain(&terrain));
     let dirt = materials.add(Color::rgb_u8(255, 144, 100).into());
 
     commands.spawn((
         PbrBundle {
-            mesh: mesht.clone(),
+            mesh: mesh.clone(),
             material: dirt.clone(),
             ..default()
         },
-        Wireframe,
+        // Wireframe,
     ));
 }
 
@@ -198,24 +225,164 @@ fn mesh_terrain(terrain: &Res<Terrain>) -> Mesh {
     data.normals = vec![];
     data.indicies = vec![];
 
-    // for x in 0..MAP_SIZE_X {
-    //     for z in 0..MAP_SIZE_Z {
-    //         for y in 0..MAP_SIZE_Y {
-    //             let block = terrain.get(x, y, z);
-    //             if !block.is_filled() {
-    //                 continue;
-    //             }
-    //             if x >= MAP_SIZE_X - 1
-    //         }
-    //     }
-    // }
+    let mut idx = 0;
+
+    for x in 0..MAP_SIZE_X {
+        for z in 0..MAP_SIZE_Z {
+            for y in 0..MAP_SIZE_Y {
+                let block = terrain.get(x, y, z);
+
+                if !block.is_filled() {
+                    continue;
+                }
+
+                let fx = x as f32;
+                let fy = y as f32;
+                let fz = z as f32;
+
+                let neighbors = terrain.get_neighbors_immediate(x, y, z);
+
+                if !neighbors[0].is_filled() {
+                    // add face above
+                    data.positions.push([fx, fy + 1., fz]);
+                    data.positions.push([fx + 1., fy + 1., fz]);
+                    data.positions.push([fx + 1., fy + 1., fz + 1.]);
+                    data.positions.push([fx, fy + 1., fz + 1.]);
+
+                    data.normals.push([0., 1., 0.]);
+                    data.normals.push([0., 1., 0.]);
+                    data.normals.push([0., 1., 0.]);
+                    data.normals.push([0., 1., 0.]);
+
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 1);
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 3);
+                    data.indicies.push(idx + 2);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[1].is_filled() {
+                    // add face in front
+                    data.positions.push([fx, fy, fz]);
+                    data.positions.push([fx, fy + 1., fz]);
+                    data.positions.push([fx + 1., fy + 1., fz]);
+                    data.positions.push([fx + 1., fy, fz]);
+
+                    data.normals.push([0., 0., -1.]);
+                    data.normals.push([0., 0., -1.]);
+                    data.normals.push([0., 0., -1.]);
+                    data.normals.push([0., 0., -1.]);
+
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 1);
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 3);
+                    data.indicies.push(idx + 0);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[2].is_filled() {
+                    // add face right
+                    data.positions.push([fx + 1., fy, fz]);
+                    data.positions.push([fx + 1., fy, fz + 1.]);
+                    data.positions.push([fx + 1., fy + 1., fz + 1.]);
+                    data.positions.push([fx + 1., fy + 1., fz]);
+
+                    data.normals.push([1., 0., 0.]);
+                    data.normals.push([1., 0., 0.]);
+                    data.normals.push([1., 0., 0.]);
+                    data.normals.push([1., 0., 0.]);
+
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 1);
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 3);
+                    data.indicies.push(idx + 2);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[3].is_filled() {
+                    // add face behind
+                    data.positions.push([fx, fy, fz + 1.]);
+                    data.positions.push([fx, fy + 1., fz + 1.]);
+                    data.positions.push([fx + 1., fy + 1., fz + 1.]);
+                    data.positions.push([fx + 1., fy, fz + 1.]);
+
+                    data.normals.push([0., 0., 1.]);
+                    data.normals.push([0., 0., 1.]);
+                    data.normals.push([0., 0., 1.]);
+                    data.normals.push([0., 0., 1.]);
+
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 1);
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 3);
+                    data.indicies.push(idx + 2);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[4].is_filled() {
+                    // add face left
+                    data.positions.push([fx, fy, fz]);
+                    data.positions.push([fx, fy, fz + 1.]);
+                    data.positions.push([fx, fy + 1., fz + 1.]);
+                    data.positions.push([fx, fy + 1., fz]);
+
+                    data.normals.push([-1., 0., 0.]);
+                    data.normals.push([-1., 0., 0.]);
+                    data.normals.push([-1., 0., 0.]);
+                    data.normals.push([-1., 0., 0.]);
+
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 1);
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 3);
+                    data.indicies.push(idx + 0);
+
+                    idx = idx + 4;
+                }
+
+                if !neighbors[5].is_filled() {
+                    // add face below
+                    data.positions.push([fx, fy, fz]);
+                    data.positions.push([fx + 1., fy, fz]);
+                    data.positions.push([fx + 1., fy, fz + 1.]);
+                    data.positions.push([fx, fy, fz + 1.]);
+
+                    data.normals.push([0., -1., 0.]);
+                    data.normals.push([0., -1., 0.]);
+                    data.normals.push([0., -1., 0.]);
+                    data.normals.push([0., -1., 0.]);
+
+                    data.indicies.push(idx + 0);
+                    data.indicies.push(idx + 1);
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 2);
+                    data.indicies.push(idx + 3);
+                    data.indicies.push(idx + 0);
+
+                    idx = idx + 4;
+                }
+            }
+        }
+    }
 
     // let mut i = 0;
     // for x in 0..(size_x + 1) {
     //     for z in 0..(size_z + 1) {
     //         let v1 = [x as f32, 0., z as f32];
     //         data.positions[i] = v1;
-    //         data.normals[i] = [0.0, 1.0, 0.0];
+    //         data.normals[i] = [0., 1., 0.];
     //         i += 1;
     //     }
     // }
