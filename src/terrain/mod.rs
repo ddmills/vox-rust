@@ -114,13 +114,23 @@ fn generate_voxels(
     mut terrain: ResMut<Terrain>,
     mut ev_terrain_mod: EventWriter<TerrainModifiedEvent>,
 ) {
+    let rad = MAP_SIZE_X as f32 / 2.;
+    let center = Vec3::new(
+        MAP_SIZE_X as f32 / 2.,
+        MAP_SIZE_Y as f32 / 2.,
+        MAP_SIZE_Z as f32 / 2.,
+    );
     for x in 0..MAP_SIZE_X {
         for z in 0..MAP_SIZE_Z {
             for y in 0..24 {
-                if y < 16 {
-                    terrain.blocks[x as usize][z as usize][y as usize] = Block::Stone;
-                } else {
-                    terrain.blocks[x as usize][z as usize][y as usize] = Block::Dirt;
+                let pos = Vec3::new(x as f32, y as f32, z as f32);
+
+                if pos.distance(center) < rad {
+                    if y < 16 {
+                        terrain.blocks[x as usize][z as usize][y as usize] = Block::Stone;
+                    } else {
+                        terrain.blocks[x as usize][z as usize][y as usize] = Block::Dirt;
+                    }
                 }
             }
         }
@@ -130,9 +140,9 @@ fn generate_voxels(
 }
 
 fn debug_blocks(terrain: Res<Terrain>) {
-    for z in 0..MAP_SIZE_Z {
-        println!("z={}", z);
-        for y in 0..MAP_SIZE_Y {
+    for y in 0..MAP_SIZE_Y {
+        println!("y={}", y);
+        for z in 0..MAP_SIZE_Z {
             for x in 0..MAP_SIZE_X {
                 let d = terrain.get(x, y, z);
                 print!("{}", d);
@@ -173,42 +183,6 @@ fn render_blocks(
         },
         Wireframe,
     ));
-
-    // for y in 0..MAP_SIZE_Y {
-    //     for z in 0..MAP_SIZE_Z {
-    //         for x in 0..MAP_SIZE_X {
-    //             let v = terrain.get(x, y, z);
-    //             match v {
-    //                 Block::Oob => continue,
-    //                 Block::Empty => continue,
-    //                 Block::Dirt => {
-    //                     commands.spawn(PbrBundle {
-    //                         mesh: mesht.clone(),
-    //                         material: dirt.clone(),
-    //                         transform: Transform::from_xyz(
-    //                             x as f32 * BLOCK_SIZE,
-    //                             y as f32 * BLOCK_SIZE,
-    //                             z as f32 * BLOCK_SIZE,
-    //                         ),
-    //                         ..default()
-    //                     });
-    //                 }
-    //                 Block::Stone => {
-    //                     commands.spawn(PbrBundle {
-    //                         mesh: cube.clone(),
-    //                         material: stone.clone(),
-    //                         transform: Transform::from_xyz(
-    //                             x as f32 * BLOCK_SIZE,
-    //                             y as f32 * BLOCK_SIZE,
-    //                             z as f32 * BLOCK_SIZE,
-    //                         ),
-    //                         ..default()
-    //                     });
-    //                 }
-    //             };
-    //         }
-    //     }
-    // }
 }
 
 #[derive(Default)]
@@ -219,40 +193,50 @@ struct TerrainMeshData {
 }
 
 fn mesh_terrain(terrain: &Res<Terrain>) -> Mesh {
-    let size_x: u32 = 128;
-    let size_z: u32 = 128;
     let mut data = TerrainMeshData::default();
-    data.positions = vec![[0.; 3]; ((size_x + 1) * (size_z + 1)) as usize];
-    data.normals = vec![[0.; 3]; ((size_x + 1) * (size_z + 1)) as usize];
-    data.indicies = vec![0; (size_x * size_z * 6) as usize];
+    data.positions = vec![];
+    data.normals = vec![];
+    data.indicies = vec![];
 
-    let mut i = 0;
-    for x in 0..(size_x + 1) {
-        for z in 0..(size_z + 1) {
-            let v1 = [x as f32, 0., z as f32];
-            data.positions[i] = v1;
-            data.normals[i] = [0.0, 1.0, 0.0];
-            i += 1;
-        }
-    }
+    // for x in 0..MAP_SIZE_X {
+    //     for z in 0..MAP_SIZE_Z {
+    //         for y in 0..MAP_SIZE_Y {
+    //             let block = terrain.get(x, y, z);
+    //             if !block.is_filled() {
+    //                 continue;
+    //             }
+    //             if x >= MAP_SIZE_X - 1
+    //         }
+    //     }
+    // }
 
-    let mut ti = 0;
-    let mut vi = 0;
+    // let mut i = 0;
+    // for x in 0..(size_x + 1) {
+    //     for z in 0..(size_z + 1) {
+    //         let v1 = [x as f32, 0., z as f32];
+    //         data.positions[i] = v1;
+    //         data.normals[i] = [0.0, 1.0, 0.0];
+    //         i += 1;
+    //     }
+    // }
 
-    for _x in 0..size_z {
-        for _z in 0..size_x {
-            data.indicies[ti] = vi;
-            data.indicies[ti + 2] = size_x + vi + 1; // first vertex of next row
-            data.indicies[ti + 1] = vi + 1;
+    // let mut ti = 0;
+    // let mut vi = 0;
 
-            data.indicies[ti + 3] = vi + 1;
-            data.indicies[ti + 5] = size_x + vi + 1; // first vertex of next row
-            data.indicies[ti + 4] = size_x + vi + 2; // second vertex of next row
-            ti = ti + 6;
-            vi = vi + 1;
-        }
-        vi = vi + 1;
-    }
+    // for _x in 0..size_z {
+    //     for _z in 0..size_x {
+    //         data.indicies[ti] = vi;
+    //         data.indicies[ti + 2] = size_x + vi + 1; // first vertex of next row
+    //         data.indicies[ti + 1] = vi + 1;
+
+    //         data.indicies[ti + 3] = vi + 1;
+    //         data.indicies[ti + 5] = size_x + vi + 1; // first vertex of next row
+    //         data.indicies[ti + 4] = size_x + vi + 2; // second vertex of next row
+    //         ti = ti + 6;
+    //         vi = vi + 1;
+    //     }
+    //     vi = vi + 1;
+    // }
 
     return Mesh::new(PrimitiveTopology::TriangleList)
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, data.positions)
