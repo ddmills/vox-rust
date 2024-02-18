@@ -1,4 +1,11 @@
-use bevy::prelude::*;
+use bevy::{
+    pbr::wireframe::Wireframe,
+    prelude::*,
+    render::{
+        mesh::{Indices, MeshVertexAttribute},
+        render_resource::PrimitiveTopology,
+    },
+};
 
 pub struct TerrainPlugin;
 
@@ -155,43 +162,100 @@ fn render_blocks(
     }
 
     ev_terrain_mod.clear();
-    let cube = meshes.add(Mesh::from(shape::Cube { size: 0.75 }));
+    let mesht = meshes.add(mesh_terrain(&terrain));
     let dirt = materials.add(Color::rgb_u8(255, 144, 100).into());
-    let stone = materials.add(Color::rgb_u8(124, 124, 124).into());
 
-    for y in 0..MAP_SIZE_Y {
-        for z in 0..MAP_SIZE_Z {
-            for x in 0..MAP_SIZE_X {
-                let v = terrain.get(x, y, z);
-                match v {
-                    Block::Oob => continue,
-                    Block::Empty => continue,
-                    Block::Dirt => {
-                        commands.spawn(PbrBundle {
-                            mesh: cube.clone(),
-                            material: dirt.clone(),
-                            transform: Transform::from_xyz(
-                                x as f32 * BLOCK_SIZE,
-                                y as f32 * BLOCK_SIZE,
-                                z as f32 * BLOCK_SIZE,
-                            ),
-                            ..default()
-                        });
-                    }
-                    Block::Stone => {
-                        commands.spawn(PbrBundle {
-                            mesh: cube.clone(),
-                            material: stone.clone(),
-                            transform: Transform::from_xyz(
-                                x as f32 * BLOCK_SIZE,
-                                y as f32 * BLOCK_SIZE,
-                                z as f32 * BLOCK_SIZE,
-                            ),
-                            ..default()
-                        });
-                    }
-                };
-            }
+    commands.spawn((
+        PbrBundle {
+            mesh: mesht.clone(),
+            material: dirt.clone(),
+            ..default()
+        },
+        Wireframe,
+    ));
+
+    // for y in 0..MAP_SIZE_Y {
+    //     for z in 0..MAP_SIZE_Z {
+    //         for x in 0..MAP_SIZE_X {
+    //             let v = terrain.get(x, y, z);
+    //             match v {
+    //                 Block::Oob => continue,
+    //                 Block::Empty => continue,
+    //                 Block::Dirt => {
+    //                     commands.spawn(PbrBundle {
+    //                         mesh: mesht.clone(),
+    //                         material: dirt.clone(),
+    //                         transform: Transform::from_xyz(
+    //                             x as f32 * BLOCK_SIZE,
+    //                             y as f32 * BLOCK_SIZE,
+    //                             z as f32 * BLOCK_SIZE,
+    //                         ),
+    //                         ..default()
+    //                     });
+    //                 }
+    //                 Block::Stone => {
+    //                     commands.spawn(PbrBundle {
+    //                         mesh: cube.clone(),
+    //                         material: stone.clone(),
+    //                         transform: Transform::from_xyz(
+    //                             x as f32 * BLOCK_SIZE,
+    //                             y as f32 * BLOCK_SIZE,
+    //                             z as f32 * BLOCK_SIZE,
+    //                         ),
+    //                         ..default()
+    //                     });
+    //                 }
+    //             };
+    //         }
+    //     }
+    // }
+}
+
+#[derive(Default)]
+struct TerrainMeshData {
+    pub positions: Vec<[f32; 3]>,
+    pub normals: Vec<[f32; 3]>,
+    pub indicies: Vec<u32>,
+}
+
+fn mesh_terrain(terrain: &Res<Terrain>) -> Mesh {
+    let size_x: u32 = 128;
+    let size_z: u32 = 128;
+    let mut data = TerrainMeshData::default();
+    data.positions = vec![[0.; 3]; ((size_x + 1) * (size_z + 1)) as usize];
+    data.normals = vec![[0.; 3]; ((size_x + 1) * (size_z + 1)) as usize];
+    data.indicies = vec![0; (size_x * size_z * 6) as usize];
+
+    let mut i = 0;
+    for x in 0..(size_x + 1) {
+        for z in 0..(size_z + 1) {
+            let v1 = [x as f32, 0., z as f32];
+            data.positions[i] = v1;
+            data.normals[i] = [0.0, 1.0, 0.0];
+            i += 1;
         }
     }
+
+    let mut ti = 0;
+    let mut vi = 0;
+
+    for _x in 0..size_z {
+        for _z in 0..size_x {
+            data.indicies[ti] = vi;
+            data.indicies[ti + 2] = size_x + vi + 1; // first vertex of next row
+            data.indicies[ti + 1] = vi + 1;
+
+            data.indicies[ti + 3] = vi + 1;
+            data.indicies[ti + 5] = size_x + vi + 1; // first vertex of next row
+            data.indicies[ti + 4] = size_x + vi + 2; // second vertex of next row
+            ti = ti + 6;
+            vi = vi + 1;
+        }
+        vi = vi + 1;
+    }
+
+    return Mesh::new(PrimitiveTopology::TriangleList)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, data.positions)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals)
+        .with_indices(Some(Indices::U32(data.indicies)));
 }

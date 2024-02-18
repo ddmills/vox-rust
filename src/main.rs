@@ -1,4 +1,8 @@
-use bevy::{diagnostic::FrameTimeDiagnosticsPlugin, prelude::*};
+use bevy::{
+    diagnostic::FrameTimeDiagnosticsPlugin,
+    pbr::wireframe::{Wireframe, WireframePlugin},
+    prelude::*,
+};
 use camera::FlyCamera;
 
 mod camera;
@@ -11,11 +15,16 @@ fn main() {
         .add_plugins(terrain::TerrainPlugin)
         .add_plugins(terrain::TerrainRenderPlugin)
         .add_plugins(camera::CameraPlugin)
+        .add_plugins(WireframePlugin)
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .run();
 }
 
-fn setup(mut commands: Commands) {
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+) {
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
@@ -25,6 +34,18 @@ fn setup(mut commands: Commands) {
         transform: Transform::from_xyz(0., 0., 0.),
         ..default()
     });
+
+    let cube = meshes.add(Mesh::from(shape::Cube { size: 0.75 }));
+    let stone = materials.add(Color::rgb_u8(124, 124, 124).into());
+
+    commands.spawn((
+        PbrBundle {
+            mesh: cube.clone(),
+            material: stone.clone(),
+            ..default()
+        },
+        Wireframe,
+    ));
 
     commands.spawn((
         Camera3dBundle {
