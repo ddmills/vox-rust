@@ -3,31 +3,31 @@ use bevy::prelude::*;
 pub struct TerrainPlugin;
 
 #[derive(Debug, Copy, Clone)]
-enum Vox {
+enum Block {
     Oob,
     Empty,
     Dirt,
     Stone,
 }
 
-impl std::fmt::Display for Vox {
+impl std::fmt::Display for Block {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
-            Vox::Oob => write!(f, "Oob"),
-            Vox::Empty => write!(f, "Empty"),
-            Vox::Dirt => write!(f, "Dirt"),
-            Vox::Stone => write!(f, "Stone"),
+            Block::Oob => write!(f, "Oob"),
+            Block::Empty => write!(f, "Empty"),
+            Block::Dirt => write!(f, "Dirt"),
+            Block::Stone => write!(f, "Stone"),
         }
     }
 }
 
-impl Vox {
+impl Block {
     pub fn is_filled(&self) -> bool {
         match *self {
-            Vox::Oob => false,
-            Vox::Empty => false,
-            Vox::Dirt => true,
-            Vox::Stone => true,
+            Block::Oob => false,
+            Block::Empty => false,
+            Block::Dirt => true,
+            Block::Stone => true,
         }
     }
 }
@@ -35,31 +35,32 @@ impl Vox {
 const MAP_SIZE_X: i16 = 16;
 const MAP_SIZE_Z: i16 = 16;
 const MAP_SIZE_Y: i16 = 32;
-const VOXEL_SIZE: f32 = 1.0;
+const BLOCK_SIZE: f32 = 1.0;
 
 #[derive(Event)]
 pub struct TerrainModifiedEvent;
 
 #[derive(Resource)]
 struct Terrain {
-    voxels: [[[Vox; MAP_SIZE_Y as usize]; MAP_SIZE_Z as usize]; MAP_SIZE_X as usize],
+    blocks: [[[Block; MAP_SIZE_Y as usize]; MAP_SIZE_Z as usize]; MAP_SIZE_X as usize],
 }
 
 impl Default for Terrain {
     fn default() -> Self {
         Self {
-            voxels: [[[Vox::Empty; MAP_SIZE_Y as usize]; MAP_SIZE_Z as usize]; MAP_SIZE_X as usize],
+            blocks: [[[Block::Empty; MAP_SIZE_Y as usize]; MAP_SIZE_Z as usize];
+                MAP_SIZE_X as usize],
         }
     }
 }
 
 impl Terrain {
-    pub fn get(&self, x: i16, y: i16, z: i16) -> Vox {
+    pub fn get(&self, x: i16, y: i16, z: i16) -> Block {
         if self.is_pos_oob(x, y, z) {
-            return Vox::Oob;
+            return Block::Oob;
         }
 
-        return self.voxels[x as usize][z as usize][y as usize];
+        return self.blocks[x as usize][z as usize][y as usize];
     }
 
     pub fn is_pos_oob(&self, x: i16, y: i16, z: i16) -> bool {
@@ -71,8 +72,8 @@ impl Terrain {
             || z >= MAP_SIZE_Z as i16;
     }
 
-    pub fn get_neighbors(&self, x: i16, y: i16, z: i16) -> [Vox; 9 + 8 + 9] {
-        let mut n = [Vox::Empty; 9 + 8 + 9];
+    pub fn get_neighbors(&self, x: i16, y: i16, z: i16) -> [Block; 9 + 8 + 9] {
+        let mut n = [Block::Empty; 9 + 8 + 9];
         let mut i = 0;
 
         for dx in 0..=2 {
@@ -98,7 +99,7 @@ impl Plugin for TerrainPlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<Terrain>()
             .add_event::<TerrainModifiedEvent>()
-            .add_systems(Startup, (generate_voxels, debug_voxels).chain());
+            .add_systems(Startup, (generate_voxels, debug_blocks).chain());
     }
 }
 
@@ -110,9 +111,9 @@ fn generate_voxels(
         for z in 0..MAP_SIZE_Z {
             for y in 0..24 {
                 if y < 16 {
-                    terrain.voxels[x as usize][z as usize][y as usize] = Vox::Stone;
+                    terrain.blocks[x as usize][z as usize][y as usize] = Block::Stone;
                 } else {
-                    terrain.voxels[x as usize][z as usize][y as usize] = Vox::Dirt;
+                    terrain.blocks[x as usize][z as usize][y as usize] = Block::Dirt;
                 }
             }
         }
@@ -121,7 +122,7 @@ fn generate_voxels(
     ev_terrain_mod.send(TerrainModifiedEvent {});
 }
 
-fn debug_voxels(terrain: Res<Terrain>) {
+fn debug_blocks(terrain: Res<Terrain>) {
     for z in 0..MAP_SIZE_Z {
         println!("z={}", z);
         for y in 0..MAP_SIZE_Y {
@@ -138,11 +139,11 @@ pub struct TerrainRenderPlugin;
 
 impl Plugin for TerrainRenderPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, render_voxels);
+        app.add_systems(Update, render_blocks);
     }
 }
 
-fn render_voxels(
+fn render_blocks(
     terrain: Res<Terrain>,
     mut ev_terrain_mod: EventReader<TerrainModifiedEvent>,
     mut commands: Commands,
@@ -163,28 +164,28 @@ fn render_voxels(
             for x in 0..MAP_SIZE_X {
                 let v = terrain.get(x, y, z);
                 match v {
-                    Vox::Oob => continue,
-                    Vox::Empty => continue,
-                    Vox::Dirt => {
+                    Block::Oob => continue,
+                    Block::Empty => continue,
+                    Block::Dirt => {
                         commands.spawn(PbrBundle {
                             mesh: cube.clone(),
                             material: dirt.clone(),
                             transform: Transform::from_xyz(
-                                x as f32 * VOXEL_SIZE,
-                                y as f32 * VOXEL_SIZE,
-                                z as f32 * VOXEL_SIZE,
+                                x as f32 * BLOCK_SIZE,
+                                y as f32 * BLOCK_SIZE,
+                                z as f32 * BLOCK_SIZE,
                             ),
                             ..default()
                         });
                     }
-                    Vox::Stone => {
+                    Block::Stone => {
                         commands.spawn(PbrBundle {
                             mesh: cube.clone(),
                             material: stone.clone(),
                             transform: Transform::from_xyz(
-                                x as f32 * VOXEL_SIZE,
-                                y as f32 * VOXEL_SIZE,
-                                z as f32 * VOXEL_SIZE,
+                                x as f32 * BLOCK_SIZE,
+                                y as f32 * BLOCK_SIZE,
+                                z as f32 * BLOCK_SIZE,
                             ),
                             ..default()
                         });
