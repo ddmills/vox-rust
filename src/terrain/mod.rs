@@ -21,54 +21,45 @@ impl std::fmt::Display for Vox {
     }
 }
 
-const MAP_SIZE_X: i16 = 16;
-const MAP_SIZE_Y: i16 = 16;
-const MAP_SIZE_Z: i16 = 32;
-const VOXEL_SIZE: f32 = 1.0;
-
-pub struct VoxVec {
-    x: i16,
-    y: i16,
-    z: i16,
-}
-
-impl VoxVec {
-    fn new(x: i16, y: i16, z: i16) -> Self {
-        Self { x, y, z }
+impl Vox {
+    pub fn is_filled(&self) -> bool {
+        match *self {
+            Vox::Oob => false,
+            Vox::Empty => false,
+            Vox::Dirt => true,
+            Vox::Stone => true,
+        }
     }
 }
+
+const MAP_SIZE_X: i16 = 16;
+const MAP_SIZE_Z: i16 = 16;
+const MAP_SIZE_Y: i16 = 32;
+const VOXEL_SIZE: f32 = 1.0;
 
 #[derive(Event)]
 pub struct TerrainModifiedEvent;
 
 #[derive(Resource)]
 struct Terrain {
-    voxels: [[[Vox; MAP_SIZE_Z as usize]; MAP_SIZE_Y as usize]; MAP_SIZE_X as usize],
+    voxels: [[[Vox; MAP_SIZE_Y as usize]; MAP_SIZE_Z as usize]; MAP_SIZE_X as usize],
 }
 
 impl Default for Terrain {
     fn default() -> Self {
         Self {
-            voxels: [[[Vox::Empty; MAP_SIZE_Z as usize]; MAP_SIZE_Y as usize]; MAP_SIZE_X as usize],
+            voxels: [[[Vox::Empty; MAP_SIZE_Y as usize]; MAP_SIZE_Z as usize]; MAP_SIZE_X as usize],
         }
     }
 }
 
 impl Terrain {
-    pub fn get_by_pos(&self, x: i16, y: i16, z: i16) -> Vox {
+    pub fn get(&self, x: i16, y: i16, z: i16) -> Vox {
         if self.is_pos_oob(x, y, z) {
             return Vox::Oob;
         }
 
-        return self.voxels[x as usize][y as usize][z as usize];
-    }
-
-    pub fn get_by_vec(&self, pos: &VoxVec) -> Vox {
-        if self.is_vec_oob(pos) {
-            return Vox::Oob;
-        }
-
-        return self.voxels[pos.x as usize][pos.y as usize][pos.z as usize];
+        return self.voxels[x as usize][z as usize][y as usize];
     }
 
     pub fn is_pos_oob(&self, x: i16, y: i16, z: i16) -> bool {
@@ -80,24 +71,20 @@ impl Terrain {
             || z >= MAP_SIZE_Z as i16;
     }
 
-    pub fn is_vec_oob(&self, pos: &VoxVec) -> bool {
-        return self.is_pos_oob(pos.x, pos.y, pos.z);
-    }
-
-    pub fn get_neighbors(&self, pos: &VoxVec) -> [Vox; 9 + 8 + 9] {
+    pub fn get_neighbors(&self, x: i16, y: i16, z: i16) -> [Vox; 9 + 8 + 9] {
         let mut n = [Vox::Empty; 9 + 8 + 9];
         let mut i = 0;
 
-        for x in 0..=2 {
-            let xp = pos.x + x - 1;
-            for y in 0..=2 {
-                let yp = pos.y + y - 1;
-                for z in 0..=2 {
-                    let zp = pos.z + z - 1;
-                    if x == 1 && y == 1 && z == 1 {
+        for dx in 0..=2 {
+            let cx = x + dx - 1;
+            for dz in 0..=2 {
+                let cz = z + dz - 1;
+                for dy in 0..=2 {
+                    let cy = y + dy - 1;
+                    if dx == 1 && dy == 1 && dz == 1 {
                         continue;
                     }
-                    n[i] = self.get_by_pos(xp, yp, zp);
+                    n[i] = self.get(cx, cy, cz);
                     i += 1;
                 }
             }
@@ -119,13 +106,13 @@ fn generate_voxels(
     mut terrain: ResMut<Terrain>,
     mut ev_terrain_mod: EventWriter<TerrainModifiedEvent>,
 ) {
-    for z in 16..MAP_SIZE_Z {
-        for y in 0..MAP_SIZE_Y {
-            for x in 0..MAP_SIZE_X {
-                if z > 24 {
-                    terrain.voxels[x as usize][y as usize][z as usize] = Vox::Stone;
+    for x in 0..MAP_SIZE_X {
+        for z in 0..MAP_SIZE_Z {
+            for y in 0..24 {
+                if y < 16 {
+                    terrain.voxels[x as usize][z as usize][y as usize] = Vox::Stone;
                 } else {
-                    terrain.voxels[x as usize][y as usize][z as usize] = Vox::Dirt;
+                    terrain.voxels[x as usize][z as usize][y as usize] = Vox::Dirt;
                 }
             }
         }
@@ -139,7 +126,7 @@ fn debug_voxels(terrain: Res<Terrain>) {
         println!("z={}", z);
         for y in 0..MAP_SIZE_Y {
             for x in 0..MAP_SIZE_X {
-                let d = terrain.get_by_vec(&VoxVec::new(x, y, z));
+                let d = terrain.get(x, y, z);
                 print!("{}", d);
             }
             println!("");
@@ -167,17 +154,14 @@ fn render_voxels(
     }
 
     ev_terrain_mod.clear();
-    let cube = meshes.add(Mesh::from(shape::Cube { size: 0.5 }));
+    let cube = meshes.add(Mesh::from(shape::Cube { size: 0.75 }));
     let dirt = materials.add(Color::rgb_u8(255, 144, 100).into());
     let stone = materials.add(Color::rgb_u8(124, 124, 124).into());
 
-    let pos = VoxVec::new(0, 12, 24);
-    let n = terrain.get_neighbors(&pos);
-
-    for z in 0..MAP_SIZE_Z {
-        for y in 0..MAP_SIZE_Y {
+    for y in 0..MAP_SIZE_Y {
+        for z in 0..MAP_SIZE_Z {
             for x in 0..MAP_SIZE_X {
-                let v = terrain.get_by_pos(x, y, z);
+                let v = terrain.get(x, y, z);
                 match v {
                     Vox::Oob => continue,
                     Vox::Empty => continue,
@@ -187,8 +171,8 @@ fn render_voxels(
                             material: dirt.clone(),
                             transform: Transform::from_xyz(
                                 x as f32 * VOXEL_SIZE,
-                                (MAP_SIZE_Z - z) as f32 * VOXEL_SIZE,
                                 y as f32 * VOXEL_SIZE,
+                                z as f32 * VOXEL_SIZE,
                             ),
                             ..default()
                         });
@@ -199,8 +183,8 @@ fn render_voxels(
                             material: stone.clone(),
                             transform: Transform::from_xyz(
                                 x as f32 * VOXEL_SIZE,
-                                (MAP_SIZE_Z - z) as f32 * -VOXEL_SIZE,
                                 y as f32 * VOXEL_SIZE,
+                                z as f32 * VOXEL_SIZE,
                             ),
                             ..default()
                         });
