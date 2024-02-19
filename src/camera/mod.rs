@@ -44,7 +44,7 @@ impl Plugin for CameraPlugin {
 }
 
 fn grab_cursor(
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     if let Ok(mut window) = primary_window.get_single_mut() {
@@ -88,7 +88,7 @@ fn apply_camera_rotation(
 }
 
 fn apply_camera_translation(
-    keys: Res<Input<KeyCode>>,
+    keys: Res<ButtonInput<KeyCode>>,
     time: Res<Time>,
     primary_window: Query<&Window, With<PrimaryWindow>>,
     settings: Res<CameraSettings>,
@@ -97,8 +97,8 @@ fn apply_camera_translation(
     if let Ok(window) = primary_window.get_single() {
         for mut transform in cameras.iter_mut() {
             let mut delta = Vec3::ZERO;
-            let local_z = transform.local_z();
-            let forward = transform.forward();
+            let local_z = *transform.local_z();
+            let forward = *transform.forward();
             let mut is_shift: bool = false;
             // let forward = -Vec3::new(local_z.x, 0., local_z.z);
             let right = Vec3::new(local_z.z, 0., -local_z.x);
@@ -107,10 +107,10 @@ fn apply_camera_translation(
                 match window.cursor.grab_mode {
                     CursorGrabMode::None => (),
                     _ => match key {
-                        KeyCode::W => delta += forward,
-                        KeyCode::S => delta -= forward,
-                        KeyCode::A => delta -= right,
-                        KeyCode::D => delta += right,
+                        KeyCode::KeyW => delta += forward,
+                        KeyCode::KeyS => delta -= forward,
+                        KeyCode::KeyA => delta -= right,
+                        KeyCode::KeyD => delta += right,
                         KeyCode::ShiftLeft => is_shift = true,
                         _ => (),
                     },

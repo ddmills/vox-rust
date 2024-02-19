@@ -3,10 +3,12 @@ use bevy::{
     prelude::*,
     render::{
         mesh::{Indices, MeshVertexAttribute, MeshVertexBufferLayout},
+        render_asset::RenderAssetUsages,
         render_resource::{
             AsBindGroup, PrimitiveTopology, RenderPipelineDescriptor, ShaderRef,
             SpecializedMeshPipelineError, VertexFormat,
         },
+        Render,
     },
     utils::petgraph::adj::Neighbors,
 };
@@ -463,10 +465,13 @@ fn mesh_terrain_simple(terrain: &Res<Terrain>) -> Mesh {
         }
     }
 
-    return Mesh::new(PrimitiveTopology::TriangleList)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, data.positions)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs)
-        .with_inserted_attribute(ATTRIBUTE_TEXTURE_IDX, data.tex_idx)
-        .with_indices(Some(Indices::U32(data.indicies)));
+    return Mesh::new(
+        PrimitiveTopology::TriangleList,
+        RenderAssetUsages::default(),
+    )
+    .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, data.positions)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, data.normals)
+    .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, data.uvs)
+    .with_inserted_attribute(ATTRIBUTE_TEXTURE_IDX, data.tex_idx)
+    .with_inserted_indices(Indices::U32(data.indicies));
 }

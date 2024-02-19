@@ -44,8 +44,8 @@ fn setup(
         ..default()
     });
 
-    let cube = meshes.add(Mesh::from(shape::Cube { size: 0.75 }));
-    let stone = materials.add(Color::rgb_u8(124, 124, 124).into());
+    let cube = meshes.add(Cuboid::new(0.75, 0.75, 0.75));
+    let stone = materials.add(Color::rgb_u8(124, 124, 124));
 
     commands.spawn((
         PbrBundle {
