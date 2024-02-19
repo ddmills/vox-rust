@@ -5,6 +5,7 @@ use bevy::{
     prelude::*,
 };
 use camera::FlyCamera;
+use terrain::TerrainMaterial;
 
 mod camera;
 mod terrain;
@@ -12,7 +13,7 @@ mod terrain;
 fn main() {
     App::new()
         .add_systems(Startup, setup)
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, MaterialPlugin::<TerrainMaterial>::default()))
         .add_plugins(terrain::TerrainPlugin)
         .add_plugins(terrain::TerrainRenderPlugin)
         .add_plugins(camera::CameraPlugin)
