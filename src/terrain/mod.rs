@@ -8,7 +8,7 @@ use bevy::{
             AsBindGroup, PrimitiveTopology, RenderPipelineDescriptor, ShaderRef,
             SpecializedMeshPipelineError, VertexFormat,
         },
-        texture::BevyDefault,
+        texture::{BevyDefault, ImageFormatSetting, ImageLoaderSettings, ImageSampler},
         Render,
     },
     utils::petgraph::adj::Neighbors,
@@ -192,7 +192,9 @@ fn render_blocks(
     }
     ev_terrain_mod.clear();
 
-    let terrain_texture: Handle<Image> = asset_server.load("terrain.png");
+    let settings = |s: &mut ImageLoaderSettings| s.sampler = ImageSampler::nearest();
+
+    let terrain_texture: Handle<Image> = asset_server.load_with_settings("terrain.png", settings);
 
     let mesh = meshes.add(mesh_terrain_simple(&terrain));
     let mat = materials.add(TerrainMaterial {
