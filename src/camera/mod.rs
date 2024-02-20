@@ -26,7 +26,7 @@ impl Default for CameraSettings {
     fn default() -> Self {
         Self {
             sensitivity: 0.00012,
-            speed: 12.,
+            speed: 20.,
             shift_multiplier: 2.,
         }
     }

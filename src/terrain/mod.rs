@@ -8,6 +8,7 @@ use bevy::{
             AsBindGroup, PrimitiveTopology, RenderPipelineDescriptor, ShaderRef,
             SpecializedMeshPipelineError, VertexFormat,
         },
+        texture::BevyDefault,
         Render,
     },
     utils::petgraph::adj::Neighbors,
@@ -189,23 +190,23 @@ fn render_blocks(
     if ev_terrain_mod.is_empty() {
         return;
     }
-
     ev_terrain_mod.clear();
+
     let terrain_texture: Handle<Image> = asset_server.load("terrain.png");
 
     let mesh = meshes.add(mesh_terrain_simple(&terrain));
-    // let dirt = materials.add(Color::rgb_u8(255, 144, 100).into());
     let mat = materials.add(TerrainMaterial {
         color: Color::YELLOW_GREEN,
+        texture: terrain_texture,
     });
 
     commands.spawn((
         MaterialMeshBundle {
-            mesh: mesh.clone(),
+            mesh: mesh,
             material: mat,
             ..default()
         },
-        // Wireframe,
+        Wireframe,
     ));
 }
 
@@ -214,7 +215,10 @@ const ATTRIBUTE_TEXTURE_IDX: MeshVertexAttribute =
 
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 pub struct TerrainMaterial {
-    #[uniform[0]]
+    #[texture(0)]
+    #[sampler(1)]
+    texture: Handle<Image>,
+    #[uniform[2]]
     color: Color,
 }
 

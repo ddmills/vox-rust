@@ -58,7 +58,8 @@ fn setup(
 
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_xyz(-10., 0., -10.).looking_at(Vec3::ZERO, Vec3::Y),
+            transform: Transform::from_xyz(-10., 0., -10.)
+                .looking_at(Vec3::new(5., 10., 10.), Vec3::Y),
             ..default()
         },
         FlyCamera,
