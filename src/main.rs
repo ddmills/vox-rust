@@ -5,9 +5,11 @@ use bevy::{
     prelude::*,
 };
 use camera::FlyCamera;
+use slice::SlicePlugin;
 use terrain::TerrainMaterial;
 
 mod camera;
+mod slice;
 mod terrain;
 
 fn main() {
@@ -15,8 +17,8 @@ fn main() {
         .add_systems(Startup, setup)
         .add_plugins((DefaultPlugins, MaterialPlugin::<TerrainMaterial>::default()))
         .add_plugins(terrain::TerrainPlugin)
-        .add_plugins(terrain::TerrainRenderPlugin)
         .add_plugins(camera::CameraPlugin)
+        .add_plugins(SlicePlugin)
         .add_plugins(WireframePlugin)
         .add_plugins(FrameTimeDiagnosticsPlugin::default())
         .add_systems(Update, draw_gizmos)
